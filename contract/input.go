@@ -78,7 +78,6 @@ func (i *Input) Parsed(Config Argument) error {
 			} else {
 				strArgKy = strArg[startIndex+1 : stopIndex]
 				strValue = strArg[stopIndex+1:]
-
 			}
 			if strArgKy != "" {
 				i.Option[strArgKy] = strValue

@@ -9,14 +9,6 @@ import (
 	"strconv"
 )
 
-// http://patorjk.com/software/taag/#p=testall&f=Big&t=Gocmd
-var banner = `  _____                  __
- / ___/__  ______ _  ___/ /
-/ (_ / _ \/ __/  ' \/ _  / 
-\___/\___/\__/_/_/_/\_,_/  
-
-`
-
 func (c *Console) RunHelp() {
 	fmt.Print(banner)
 
@@ -29,7 +21,7 @@ func (c *Console) RunHelp() {
 
 	// 命令排序
 	arrCmd := map[string]contract.Command{}
-	for _, path := range GetPluginPath() {
+	for _, path := range c.GetPluginPath() {
 		fileInfoList, err := ioutil.ReadDir(path)
 		if err != nil {
 			continue
@@ -37,6 +29,11 @@ func (c *Console) RunHelp() {
 
 		for _, file := range fileInfoList {
 			fileName := file.Name()
+			lenFile := len(fileName)
+			if lenFile < 4 || fileName[lenFile-3:] != ".so" {
+				continue
+			}
+
 			plug, err := plugin.Open(path + fileName)
 			if err != nil {
 				fmt.Println(err)

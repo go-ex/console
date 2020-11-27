@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-ex/console/contract"
+	"gopkg.in/ini.v1"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"plugin"
-	"strings"
 )
 
 func New() contract.Console {
@@ -16,6 +14,10 @@ func New() contract.Console {
 }
 
 type Console struct {
+	programName string // 编译后的程序名称,命令
+	programPath string // 编译后的程序绝对路径
+
+	config *ini.File
 }
 
 func (c *Console) HasCommand() bool {
@@ -25,8 +27,8 @@ func (c *Console) HasCommand() bool {
 		return false
 	} else {
 		cmdName := os.Args[1] + ".so"
-		for _, path := range GetPluginPath() {
-			if hasPlugin(path + cmdName) {
+		for _, path := range c.GetPluginPath() {
+			if hasFile(path + cmdName) {
 				return true
 			}
 		}
@@ -40,9 +42,9 @@ func (c *Console) RunCommand() error {
 	name := os.Args[1]
 	cmdName := name + ".so"
 
-	for _, path := range GetPluginPath() {
+	for _, path := range c.GetPluginPath() {
 		pluginPath := path + cmdName
-		if hasPlugin(pluginPath) {
+		if hasFile(pluginPath) {
 			plug, err := plugin.Open(pluginPath)
 			if err != nil {
 				return err
@@ -53,44 +55,10 @@ func (c *Console) RunCommand() error {
 				return err
 			}
 
-			cmd := inf.(contract.Command)
-			configure := cmd.Configure()
-			input := contract.Input{
-				Has:      map[string]bool{},
-				Argument: map[string]string{},
-				Option:   map[string]string{},
+			cmd, ok := inf.(contract.Command)
+			if ok {
+				return c.RunPlugin(path, name, cmd)
 			}
-
-			err = input.Parsed(configure.Input)
-			if err != nil {
-				return err
-			}
-
-			if input.GetHas("-h") {
-				return c.RunCommandHelp(name, configure)
-			}
-			// 如果有守护进程方式启动参数，拦截，并且转换后台启动
-			if input.GetHas("-d") {
-				for key, str := range os.Args {
-					if str == "-d" {
-						os.Args[key] = "-d=true"
-						break
-					}
-				}
-				command := exec.Command(os.Args[0], os.Args[1:]...)
-				out, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
-				if err == nil {
-					command.Stdout = out
-				}
-				return command.Start()
-			} else if input.GetOption("d") == "true" {
-				// 命令转换为后台的传入
-				input.Has["-d"] = true
-			}
-
-			cmd.Execute(input)
-
-			return nil
 		}
 	}
 
@@ -101,26 +69,4 @@ func GetWd() string {
 	dir, _ := os.Getwd()
 
 	return dir
-}
-
-func GetRoot() string {
-	paths, fileName := filepath.Split(os.Args[0])
-	ext := filepath.Ext(fileName)
-	abs := strings.TrimSuffix(fileName, ext)
-
-	return paths + abs
-}
-
-// 命令插件可能在的目录，当前目录、执行目录
-func GetPluginPath() []string {
-	return []string{GetWd() + "/script/plugin/", GetRoot() + "/"}
-}
-
-func hasPlugin(file string) bool {
-	_, err := os.Stat(file)
-	if err != nil {
-		// no such file or dir
-		return false
-	}
-	return true
 }

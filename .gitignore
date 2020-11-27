@@ -1,2 +1,4 @@
 .idea
 script/*
+example/cli
+example/cli.ini
