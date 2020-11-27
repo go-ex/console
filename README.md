@@ -57,4 +57,16 @@ Available commands:
   hello   命令说明
 
 ~~~~
-
+帮助命令
+~~~~
+my@ctfang console % ./example/cli hello -h
+Usage:
+  hello <name>
+    -age                  = 30
+Arguments:
+  name                    问候名字
+Option:
+  -age                    年龄
+Description:
+   命令说明
+~~~~
